@@ -1,0 +1,37 @@
+Version 0.4  2012-02-20  Jean R. Mavi  <jmavi21@yahoo.com>
+
+* Makefile
+    Added commands for cleaning and documentation
+
+* priv/ct_suite_log_parser.peg
+    Created Parsing Expression Grammar (PEG) for parsing/matching CT's suite.log.html file
+
+* rebar.config
+    Removed dependency on mochiweb
+    Added dependency erlando, for use of error_m monad
+    Added dependency neotoma, for translation of *.peg file into *.erl
+    Added pre-compile hook to generate erlang code from PEG file using neotoma
+
+* src/ct_surefire.app.src
+    Upgraded version from 0.3 to 0.4
+    Added description to ct_surefire library
+    Minor formatting improvement
+
+* src/ct_surefire_app.erl
+    Removed; there is no need to start/stop this library or any of its dependencies
+
+* src/ct_surefire_sup.erl
+    Removed; there are no child processes. Also, this library contains just a convenience module/function, not a running process
+
+* src/ct_surefire.erl
+    Created descriptive function generate_surefire_reports/2, retained to_surefire_xml/1,2 as alias functions
+    When parsing suite.log.html, replaced ?TAG and follow/2 with neotoma-generated ct_html_log:parse/1 or ct_html_log:file/1
+    Used parsing expression grammar file (*.peg) in priv to define pattern for suite.log.html file; also affords greater flexibility if later versions of common_test/test_server change the pattern
+    Modified application run directory wildcard from apps.* to *.log; also consolidated three filelib:wildcard/1,2 calls into one
+    Added Common Test Surefire XML report suffix _ct, in order to avoid conflict with EUnit Surefire reports
+    Tested and verified against common_test-1.6 and test_server-3.5
+    Added guards and/or checks against invalid user_data: throws error/exception or returns {error, Reason :: term()}
+    Added EDoc comments
+
+* TODO
+    Create EUnit test functions

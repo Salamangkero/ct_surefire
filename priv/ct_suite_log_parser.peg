@@ -1,0 +1,103 @@
+%%========================================================================================================================================
+%% HTML tokens
+%%========================================================================================================================================
+html <- ([^<] / ("<" !"table"))* table .* `
+    [_, Table, _] = Node, {ok, Table}
+`;
+
+table <- (open_table ignored_table_row) table_rows (ignored_filler* close_table) `
+    [_, TableRows, _] = Node, TableRows
+`;
+
+table_rows <- (open_row ignored_filler*) table_data (ignored_filler* close_row) (ignored_filler* table_rows)? `
+    case Node of
+        [_, TData, _, []] ->
+            %% This is the last row of the table, that is, this contains the total duration of the entire Common Test run
+            [_, CtDuration | _] = [TD || TD <- TData, [] =/= TD],
+            {CtDuration -- "s", 0, 0, []};
+        [_, TData, _, [_, {CtDuration, Failed, Skipped, TableRows}]] ->
+            case [TD || TD <- TData, [] =/= TD] of
+                [TestCaseNum, Module, Function, _, TestCaseDuration, "Ok"] ->
+                    {CtDuration, Failed, Skipped, [{TestCaseNum, Module, Function, TestCaseDuration -- "s", ok} | TableRows]};
+                [TestCaseNum, Module, Function, _, TestCaseDuration, "FAILED", Reason] ->
+                    {CtDuration, Failed + 1, Skipped, [{TestCaseNum, Module, Function, TestCaseDuration -- "s", {failed, Reason}} | TableRows]};
+                [TestCaseNum, Module, Function, _, TestCaseDuration, "SKIPPED", Reason] ->
+                    {CtDuration, Failed, Skipped + 1, [{TestCaseNum, Module, Function, TestCaseDuration -- "s", {skipped, Reason}} | TableRows]};
+                _ ->
+                    % an empty first cell denotes the start or the end of a test case group
+                    {CtDuration, Failed, Skipped, TableRows}
+            end
+    end
+`;
+
+table_data <- (open_cell ignored_html_element*) string? (ignored_html_element* close_cell) (ignored_filler? table_data)? `
+    case Node of
+        [_, CData, _, []] ->
+            [CData];
+        [_, CData, _, [_, TableData]] ->
+            [CData | TableData]
+    end
+`;
+
+%%========================================================================================================================================
+%% CData tokens
+%%========================================================================================================================================
+string <- char+ (ignored_html_element* string)? `
+    case Node of
+        [String, []] ->
+            lists:flatten(string:strip(String));
+        [String, [_, MoreString]] ->
+            lists:flatten([string:strip(String), " ", MoreString])
+    end
+`;
+
+char <- [^<] / ("<" !("/" / "a" / "br" / "font")) `
+    case Node of
+        [<<"<">>, []] ->
+            "&lt;";
+        <<">">> ->
+            "&gt;";
+        Char ->
+            binary_to_list(Char)
+    end
+`;
+
+%%========================================================================================================================================
+%% HTML tag tokens
+%%========================================================================================================================================
+close_bold <- "</b>" ;
+
+close_cell <- "</td>" ;
+
+close_font <- "</font>";
+
+close_hyperlink <- "</a>" ;
+
+close_row <- "</tr>" ;
+
+close_table <- "</table>" ;
+
+line_break <- "<br" [^>]* "/"? ">" ;
+
+open_bold <- "<b" [^>]* ">" ;
+
+open_cell <- "<td" [^>]* ">" ;
+
+open_font <- "<font" [^>]* ">" ;
+
+open_hyperlink <- "<a" [^>]* ">" ;
+
+open_row <- "<tr" [^>]* ">" ;
+
+open_table <- "<table" [^>]* ">" ;
+
+%%========================================================================================================================================
+%% Ignored tokens
+%%========================================================================================================================================
+ignored_filler <- ignored_html_element / ignored_whitespace ;
+
+ignored_html_element <- close_bold / close_font / close_hyperlink / line_break / open_bold / open_font / open_hyperlink ;
+
+ignored_table_row <- ignored_filler* "<tr" [^>]* ">" ([^<] / "<" !"/tr>")* "</tr>" ignored_filler*;
+
+ignored_whitespace <- [ \n\t] ;

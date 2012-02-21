@@ -1,12 +1,11 @@
-{application, ct_surefire,
- [
-  {description, ""},
-  {vsn, "0.3"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {mod, { ct_surefire_app, []}},
-  {env, []}
- ]}.
+{application, ct_surefire, [
+    {description, "A utility Erlang library that converts Common Test's suite.log.html output file into a Surefire XML report"},
+    {vsn, "0.4"},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib
+    ]},
+    {mod, {ct_surefire_app, []}},
+    {env, []}
+]}.
